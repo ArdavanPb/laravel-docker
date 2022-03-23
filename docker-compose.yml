@@ -1,0 +1,87 @@
+version: '3'
+networks:
+  webapp:
+
+services:
+  app:
+    build: ./app
+    restart: always
+    container_name: laravel
+    volumes:
+      - type: bind
+        source: ./volumes/app
+        target: /var/www/html
+    networks:
+      - webapp 
+  nginx:
+    build: ./nginx
+    ports:
+      - 8080:80
+    volumes:
+      - type: bind
+        source: ./volumes/app
+        target: /var/www/html
+    links:
+      - app
+    restart: always
+    depends_on:
+      - app
+      - db
+    networks:
+      - webapp
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: exampledb
+      MYSQL_USER: exampleuser
+      MYSQL_PASSWORD: examplepass
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    volumes:
+      - type: bind
+        source: ./volumes/mysql
+        target: /var/lib/mysql
+    networks:
+      - webapp
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    ports:
+      - 9001:80
+    environment:
+      - PMA_ARBITRARY=1
+    networks:
+      - webapp
+  composer:
+    image: composer:latest
+    volumes:
+      - type: bind
+        source: ./volumes/app
+        target: /var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - app
+    networks:
+      - webapp
+  npm:
+    image: node
+    volumes:
+      - type: bind
+        source: ./volumes/app
+        target: /var/www/html
+    working_dir: /var/www/html
+    entrypoint: ['npm']
+  artisan:
+    build: ./app
+    volumes:
+      - type: bind
+        source: ./volumes/app
+        target: /var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - db
+    entrypoint: ['php' , '/var/www/html/artisan']
+    networks:
+      - webapp
+    
